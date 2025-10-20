@@ -1,0 +1,10 @@
+.env
+.ipynb_checkpoints
+.ropeproject
+
+*.ipynb
+*.csv
+*.dta
+*.json
+
+to_delete/

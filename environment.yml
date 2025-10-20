@@ -1,0 +1,14 @@
+name: gpt
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python
+  - pip
+  - pandas
+  - openai
+  - ratelimit
+  - python-dotenv
+  - jupyter
+  - ipykernel
+  - tqdm
