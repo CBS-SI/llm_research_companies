@@ -7,8 +7,5 @@ dependencies:
   - pip
   - pandas
   - openai
-  - ratelimit
   - python-dotenv
-  - jupyter
-  - ipykernel
   - tqdm
