@@ -1,7 +1,5 @@
 # Creating company panel data out of company names with OpenAI LLM API
 
-Author: Pipe Galera (fcm.si@cbs.dk)
-
 🚧 WIP - scripts and prints will change.
 
 ## Output `.dta` file fields
