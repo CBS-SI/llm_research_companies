@@ -180,11 +180,11 @@ Done! saved at: /.../processed_data/processed_master_file
 │   ├── company_files
 │   │   ├── IN*110157064108_gpt-5_panel.csv
 │   │   ├── IN*110190685171_gpt-5_panel.csv
-│   └── responses
-│   ├── IN*110157064108_gpt-5_websearch.json
-│   ├── IN*110157064108_gpt-5_json.json
-│   ├── IN*110190685171_gpt-5_websearch.json
-│   ├── IN*110190685171_gpt-5_json.json
+│   ├── responses
+│   │   ├── IN*110157064108_gpt-5_websearch.json
+│   │   ├── IN*110157064108_gpt-5_json.json
+│   │   ├── IN*110190685171_gpt-5_websearch.json
+│   │   ├── IN*110190685171_gpt-5_json.json
 ├── src
 │   ├── llm_web_search_call.py
 │   ├── merge_raw_data.py
