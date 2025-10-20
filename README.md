@@ -160,4 +160,8 @@ Function create_json_llm_response took 150.7 seconds
 (gpt) pg@mbpwork dev % python src/post_llm_format.py --bvd_id "IN31739FI"
 Cleaning panel data of Sibar Auto Parts Ltd. (IN31739FI)...
 Done! Saved as /.../processed_data/company_files/IN31739FI_gpt-5_panel.csv
+
+(gpt) pg@mbpwork dev % python src/merge_processed_data.py
+Merged 20 CSV files into processed_master_file CSV and dta
+Done! saved at: /.../processed_data/processed_master_file
 ```
