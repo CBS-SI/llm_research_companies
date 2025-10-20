@@ -164,3 +164,34 @@ Done! Saved as /.../processed_data/company_files/IN31739FI_gpt-5_panel.csv
 Merged 20 CSV files into processed_master_file CSV and dta
 Done! saved at: /.../processed_data/processed_master_file
 ```
+
+## Parent directory structure
+
+```
+.
+├── raw_data
+│   ├── Ownership_data_for_ChatGPT.dta
+│   ├── ALL_BvDID_all_firms_update.dta
+│   └── PANEL_controlling_firms_orbis.dta
+├── processed_data
+│   ├── raw_master_data.csv
+│   ├── processed_master_file.csv
+│   ├── processed_master_file.dta
+│   ├── company_files
+│   │   ├── IN*110157064108_gpt-5_panel.csv
+│   │   ├── IN*110190685171_gpt-5_panel.csv
+│   └── responses
+│   ├── IN*110157064108_gpt-5_websearch.json
+│   ├── IN*110157064108_gpt-5_json.json
+│   ├── IN*110190685171_gpt-5_websearch.json
+│   ├── IN*110190685171_gpt-5_json.json
+├── src
+│   ├── llm_web_search_call.py
+│   ├── merge_raw_data.py
+│   ├── llm_code_interpreter_call.py
+│   ├── merge_processed_data.py
+│   ├── post_llm_format.py
+│   └── loop_all_companies.py
+├── environment.yml
+└── README.md
+```
