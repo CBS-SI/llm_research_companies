@@ -28,7 +28,7 @@ These are _NOT_ rules for the LLM, this are "human" explained definition of the 
 
 - `JV`. 1 if the company is owned by a Joint Venture, 0 if not.
 
-- `GUO`. The name of the Global Ultimate Owner (if it`s a subsidiary). In case of a JV, itwill be the name of the company with more ownership. In case of a 50:50 ownership, there can be multiple GUOs (e.g. IN0000249001).
+- `GUO`. The name of the Global Ultimate Owner (if it`s a subsidiary). In case of a JV, it will be the name of the company with more ownership. In case of a 50:50 ownership, there can be multiple GUOs (e.g. IN0000249001).
 
 - `GUO_BVD_ID`: the BVD of the Global Ultimate Owner, if the name of the company is avaiblable on the raw data (`Ownership_data_for_ChatGPT.dta`). This ID cannot be populated if the name of the parent company (e.g. "Eon Electric Ltd", "Government of Gujarat") is not in the raw file. Since the name of the owner is LLM generated and the `.dta` file do not contain all the possible arent company for all possible years, this field cannot be complete.
 
