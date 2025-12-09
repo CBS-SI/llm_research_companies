@@ -2,6 +2,7 @@
 
 🚧 WIP - scripts and prints will change.
 
+
 ## Output `.dta` file fields
 
 These are _NOT_ rules for the LLM, this are "human" explained definition of the variables.
@@ -10,42 +11,48 @@ These are _NOT_ rules for the LLM, this are "human" explained definition of the 
 
 - `year`: year range from 1995 to 2015, in panel shape.
 
-- `establishment_year`. The establishment year of the company.
+- `establishment_year`: The establishment year of the company.
 
-- `company_name`. Tracks if the legal company name changed year by year.
+- `orbis_company_name`: Tracks if the legal company name changed year by year.
 
-- `company_name_orbis`. The name of the company according to Orbis, stays constant (as opposed to `company_name`).
+- `company_name_orbis`: The name of the company according to Orbis, stays constant (as opposed to `company_name`).
 
-- `company_name_international`. The name of the company in a second format, given by the raw file, extended by the LLM for out of range years.
+- `company_international_name`: The name of the company in a second format, given by the raw file, extended by the LLM for out of range years.
 
-- `parent_company_name_orbis`. The name of the direct parent company according to Orbis for the years Orbis had this data, extended by the LLM for out of range years. This field is only populated if the company is a subsidiary. Given that companies can be Joint Ventures (JVs), there can be multiple parent companies.
-
-- `parent_company_ownership_years`. From which year to which year the parent company had ownership of the subsidiary (e.g. 2000-2011). The range years can go before 1995 and beyond 2015 (e.g. 1980-2015+).
+- `parent_company_name_orbis`: The name of the direct parent company according to Orbis for the years Orbis had this data, extended by the LLM for out of range years. This field is only populated if the company is a subsidiary. Given that companies can be Joint Ventures (JVs), there can be multiple parent companies.
 
 - `parent_BVD_ID`: the BVD of the parent company, if the name of the company is avaiblable in the raw data (`Ownership_data_for_ChatGPT.dta`). If the name of the owner is not in the file (e.g. "Eon Electric Ltd", "Government of Gujarat"), then the ID is not populated. Since the name of the owner is LLM generated and the `.dta` file do not contain all the possible arent company for all possible years, this field cannot be complete.
 
-- `parent_company_country`. The country of the headquarters of the parent company.
+- `parent_company_ownership_years`: From which year to which year the parent company had ownership of the subsidiary (e.g. 2000-2011). The range years can go before 1995 and beyond 2015 (e.g. 1980-2015+).
 
-- `JV`. 1 if the company is owned by a Joint Venture, 0 if not.
+- `parent_company_country`: The country of the headquarters of the parent company.
 
-- `GUO`. The name of the Global Ultimate Owner (if it`s a subsidiary). In case of a JV, it will be the name of the company with more ownership. In case of a 50:50 ownership, there can be multiple GUOs (e.g. IN0000249001).
+- `JV`: 1 if the company is owned by a Joint Venture, 0 if not.
+
+- `JV_with_india`: 1 if at least one of the Joint Venture company is Indian for a given year, 0 if not.
+
+- `GUO`: The name of the Global Ultimate Owner (if it`s a subsidiary). In case of a JV, it will be the name of the company with more ownership. In case of a 50:50 ownership, there can be multiple GUOs (e.g. IN0000249001).
 
 - `GUO_BVD_ID`: the BVD of the Global Ultimate Owner, if the name of the company is avaiblable on the raw data (`Ownership_data_for_ChatGPT.dta`). This ID cannot be populated if the name of the parent company (e.g. "Eon Electric Ltd", "Government of Gujarat") is not in the raw file. Since the name of the owner is LLM generated and the `.dta` file do not contain all the possible arent company for all possible years, this field cannot be complete.
 
 - `GUO_country`. The GUO's headquarters country.
 
-- `GUO_fav_india`: the name of the Global Ultimate Owner, "favorizing" Indian companies.
+- `foreign_controlled`: 1 if the company do not have at least one Indian GUO at a given year, otherwise 0.
+
+- `GUO_only_india`: The name of the GUO if the GUO_contry is India for a given year, missing value otherwise.
 
   _For multiple GUOs_:
-  - 50:50 Indian–Foreign: this field will only display one the Indian GUO for a given year(e.g. IN0000249001).
-  - 50:50 Indian–Indian: this field is the same as `GUO`.
-  - 50:50 Foreign–Foreign: this field is the same as `GUO`.
+  - 50:50 Indian–Foreign: this field will only display one the Indian GUO for a given year (e.g. IN0000249001).
+  - 50:50 Indian–Indian: this field will be the same as `GUO`.
+  - 50:50 Foreign–Foreign: this field will be missing.
 
   _For a single GUO_:
+  - Mayority stakeholder Indian: This field will display the Indian GUO.
+  - Mayority stakeholder Not Indian: This field will be missing.
 
-  This field is the same as `GUO`. If the GUO is a single company (e.g. no JV with Indian company), it will display the only owner regarless of the country as there is no Indian company to favorize (e.g. 'IN0000249001' or 'IN\*110157064108' in 2015).
+- `GUO_only_India_BVD_ID`: same as `GUO_BVD_ID` field but only populated for `GUO_only_india`.
 
-- `GUO_BVD_ID`: same as `GUO_BVD_ID` field but for `GUO_only_india`. Same restrictions apply.
+- `IBG`: 1 if the company is part of a "Indian Business Group", 0 otherwise. (The Oxford Handbook of Business Groups (2010; online edn, Oxford Academic, 2 Sept. 2010 -  https://doi.org/10.1093/oxfordhb/9780199552863.003.0011)
 
 - `sources`: The URL of the online sources that the LLM used to extract the information. If you are in doubt on why it wrote a given peace of information at a given year, visit the URL under sources.
 
