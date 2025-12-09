@@ -25,13 +25,23 @@ def create_master_file(COMPANY_FOLDER_PATH, PROCESSED_DATA_PATH, output_name):
 
     return merged_df
 
+
+def main():
+  load_dotenv()
+
+  COMPANY_FOLDER_PATH =  os.getenv("COMPANY_FOLDER_PATH")
+  PROCESSED_DATA_PATH = os.getenv("PROCESSED_DATA_PATH")
+
+  if not os.path.exists(COMPANY_FOLDER_PATH):
+    os.makedirs(COMPANY_FOLDER_PATH)
+
+  output_name = "processed_master_file"
+
+  master_file = create_master_file(COMPANY_FOLDER_PATH, PROCESSED_DATA_PATH, output_name)
+  print(f"Done! saved at: {PROCESSED_DATA_PATH}/{output_name}")
+
+  return master_file
+
+
 if __name__=="__main__":
-
-    load_dotenv()
-
-    COMPANY_FOLDER_PATH =  os.getenv("COMPANY_FOLDER_PATH")
-    PROCESSED_DATA_PATH = os.getenv("PROCESSED_DATA_PATH")
-    output_name = "processed_master_file"
-
-    master_file = create_master_file(COMPANY_FOLDER_PATH, PROCESSED_DATA_PATH, output_name)
-    print(f"Done! saved at: {PROCESSED_DATA_PATH}/{output_name}")
+    main()

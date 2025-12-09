@@ -19,8 +19,14 @@ def create_raw_master_file(
         .replace("", pd.NA)
         .sort_values(by=["bvd_id_number", "year"])
         .filter([
-            "bvd_id_number", "old_bvdidnumber", "CompanyCode", "year",
-            "CompanyName", "name_internat", "type_of_entity", "size_category",
+            "bvd_id_number",
+            "old_bvdidnumber",
+            "CompanyCode",
+            "year",
+            "CompanyName",
+            "name_internat",
+            "type_of_entity",
+            "size_category",
             "listed_delisted_unlisted"
                 ])
         .rename({
@@ -28,7 +34,7 @@ def create_raw_master_file(
             "old_bvdidnumber": "BVD_ID_old",
             "CompanyCode": "company_code",
             "year": "year",
-            "CompanyName": "company_name",
+            "CompanyName": "orbis_company_name",
             "name_internat": "company_international_name",
             "type_of_entity": "type_of_entity",
             "size_category": "category_size",
@@ -69,17 +75,22 @@ def create_raw_master_file(
 
     return df
 
-if __name__=="__main__":
 
-    load_dotenv()
+def main():
+  load_dotenv()
 
-    MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
-    RAW_DATA_PATH = os.getenv("RAW_DATA_PATH")
+  MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
+  RAW_DATA_PATH = os.getenv("RAW_DATA_PATH")
 
-    create_raw_master_file(
+  df = create_raw_master_file(
         RAW_DATA_PATH = RAW_DATA_PATH,
         FIRMS_STATA_FILENAME = "ALL_BvDID_all_firms_update.dta",
         ORBIS_STATA_FILENAME = "PANEL_controlling_firms_orbis.dta",
         MASTER_DATA_PATH = MASTER_DATA_PATH
-    )
-    print("Raw master file created successfully.")
+  )
+  print("Raw master file created successfully.")
+
+  return df
+
+if __name__=="__main__":
+  main()

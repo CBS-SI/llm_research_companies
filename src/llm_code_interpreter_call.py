@@ -114,19 +114,19 @@ def create_json_llm_response(llm_text, data, CHATGPT_KEY, MODEL, print_cost=Fals
         - Insert the information from the string into the DataFrame.
         - The years covered are from 1995 to 2015.
         - Keep and populate these columns:
-          ['year', 'company_name', 'company_international_name', 'establishment_year',
+          ['year', 'orbis_company_name', 'company_international_name', 'establishment_year',
           'parent_company_name_orbis', 'parent_company_country', 'JV', 'GUO',
-          'GUO_country', 'parent_company_ownership_years', 'sources'].
+          'GUO_country', 'parent_company_ownership_years', 'IBG' ,'sources'].
 
         Formatting rules:
-        - If multiple values exist for the following fields use list notation: parent_company_name_orbis, parent_company_country, GUO, GUO_country, 'parent_company_ownership_years'. Examples: ["Parent Company 1", "Parent Company 2"], [India, USA], [1992-2021, 1995-2010].
-        - 'company_name', 'company_international_name', and 'parent_company_name' company and parent company naming of the output have to match the naming of the pandas DataFrame in JSON format.
+        - If multiple values exist for the following fields use list notation: 'parent_company_name_orbis', 'parent_company_country', 'GUO', 'GUO_country', 'parent_company_ownership_years'. Examples: ["Parent Company 1", "Parent Company 2"], [India, USA], [1992-2021, 1995-2010].
+        - 'orbis_company_name', 'company_international_name', and 'parent_company_name' company and parent company naming of the output have to match the naming of the pandas DataFrame in JSON format.
         - Output a valid and readable JSON — not code.
-
+        - Make sure that the following fields have the same number of elements if they are in a list: 'parent_company_name_orbis', 'parent_company_country', 'GUO','GUO_country', 'parent_company_ownership_years'.
 
         Output:
         - Only the final JSON with the updated columns and years, from 1995 to 2015.
-        - No comment, output should be a readable JSON file.
+        - No comments, the output should be a readable JSON file.
         """
 
     client = OpenAI(api_key=CHATGPT_KEY)
@@ -140,57 +140,59 @@ def create_json_llm_response(llm_text, data, CHATGPT_KEY, MODEL, print_cost=Fals
     if print_cost:
         print_openai_cost_from_response(MODEL, response)
 
-
     return response
 
+def main(argv=None):
+  parser = argparse.ArgumentParser(description="LLM company call.")
+  parser.add_argument("--bvd_id", type=str, required=True, help="Bureau van Dijk company ID")
+  parser.add_argument("--model", type=str, default="gpt-5", help="LLM model to use (default: gpt-5)")
+  args = parser.parse_args(argv)
+
+  BVD_ID = args.bvd_id
+  MODEL = args.model
+
+  load_dotenv()
+
+  MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
+  LLM_RESPONSES_DATA_PATH = os.getenv("LLM_RESPONSES_DATA_PATH")
+
+  if not os.path.exists(LLM_RESPONSES_DATA_PATH):
+    os.makedirs(LLM_RESPONSES_DATA_PATH)
+
+  # Check if LLM response already exists
+  file_name = f"{LLM_RESPONSES_DATA_PATH}/{BVD_ID}_{MODEL}_json.json"
+  if os.path.exists(file_name):
+      print(f"✓ JSON LLM response already exists: {file_name}")
+  else:
+      # Step 2: Creating a valid panel data from the info using code_interpreter
+      print(f"✗ {BVD_ID} JSON LLM response not found. Running llm_code_interpreter_call.py...")
+      llm_text = load_llm_web_response_text(
+                      LLM_RESPONSES_DATA_PATH=LLM_RESPONSES_DATA_PATH,
+                      BVD_ID=BVD_ID,
+                      MODEL=MODEL)
+
+      df_company = filter_company(
+          RAW_DATA_PATH=MASTER_DATA_PATH,
+          BVD_ID=BVD_ID
+      )
+
+      response_json = create_json_llm_response(
+          llm_text=llm_text,
+          data=df_company,
+          CHATGPT_KEY=os.getenv("CHATGPT_KEY"),
+          MODEL=MODEL,
+          print_cost=True
+      )
+
+      # Save response
+      file_name = f"{LLM_RESPONSES_DATA_PATH}/{BVD_ID}_{MODEL}_json.json"
+      with open(file_name, "w", encoding="utf-8") as f:
+          json.dump({
+              "timestamp": datetime.now().isoformat(),
+              "response": response_json.model_dump()
+          }, f, ensure_ascii=False, indent=2)
+
+  print("✓ llm_code_interpreter_call.py completed successfully")
+
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="LLM company call.")
-    parser.add_argument("--bvd_id", type=str, required=True, help="Bureau van Dijk company ID")
-    parser.add_argument("--model", type=str, default="gpt-5", help="LLM model to use (default: gpt-5)")
-    args = parser.parse_args()
-
-    BVD_ID = args.bvd_id
-    MODEL = args.model
-
-    load_dotenv()
-
-    RAW_OWNERSHIP_DATA_PATH = os.getenv("RAW_OWNERSHIP_DATA_PATH")
-    MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
-    LLM_RESPONSES_DATA_PATH = os.getenv("LLM_RESPONSES_DATA_PATH")
-    COMPANY_FOLDER_PATH = os.getenv("COMPANY_FOLDER_PATH")
-
-    # Check if LLM response already exists
-    file_name = f"{LLM_RESPONSES_DATA_PATH}/{BVD_ID}_{MODEL}_json.json"
-    if os.path.exists(file_name):
-        print(f"✓ JSON LLM response already exists: {file_name}")
-    else:
-        # Step 2: Creating a valid panel data from the info using code_interpreter
-        print(f"✗ JSON LLM response not found. Running llm_code_interpreter_call.py...")
-        llm_text = load_llm_web_response_text(
-                        LLM_RESPONSES_DATA_PATH=LLM_RESPONSES_DATA_PATH,
-                        BVD_ID=BVD_ID,
-                        MODEL=MODEL)
-
-        df_company = filter_company(
-            RAW_DATA_PATH=MASTER_DATA_PATH,
-            BVD_ID=BVD_ID
-        )
-
-        response_json = create_json_llm_response(
-            llm_text=llm_text,
-            data=df_company,
-            CHATGPT_KEY=os.getenv("CHATGPT_KEY"),
-            MODEL=MODEL,
-            print_cost=True
-        )
-
-        # Save response
-        file_name = f"{LLM_RESPONSES_DATA_PATH}/{BVD_ID}_{MODEL}_json.json"
-        with open(file_name, "w", encoding="utf-8") as f:
-            json.dump({
-                "timestamp": datetime.now().isoformat(),
-                "response": response_json.model_dump()
-            }, f, ensure_ascii=False, indent=2)
-
-    print(f"✓ llm_code_interpreter_call.py completed successfully")
+  main()

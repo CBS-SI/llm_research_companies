@@ -85,9 +85,8 @@ def print_openai_cost_from_response(MODEL, response):
 @timeit
 def create_websearch_llm_response(data, CHATGPT_KEY, MODEL, print_cost=False):
 
-    company = data.company_name.unique()[0]
+    company = data.orbis_company_name.unique()[0]
     international_name = data.company_international_name.unique()[0]
-    json_sample = data.to_json()
 
     prompt = f"""
         Research in the web the history of ownership of the indian company "{company}", internationally known as "{international_name}"
@@ -95,21 +94,20 @@ def create_websearch_llm_response(data, CHATGPT_KEY, MODEL, print_cost=False):
         Task:
         Web search the following infomation by year, from the year 1995 to 2015:
 
-        - 'company_name'. Track if the company name changed, and change it according to year.
-        - 'company_international_name'. The company international name.
-        - 'establishment_year'. The establishment year of the company.
-        - 'parent_company_name_orbis'. The name of the direct parent company if it's a subsidiary. Consider that parent companies can be part of Joint ventures. List all the direct parent companies for a given adquisition.
-        - 'parent_company_ownership_years'. Ownership Dates in years. From which year to which year the parent company had ownership of the subsidiary. The range years can go before 1995 and beyond 2015. Only the years, no text. Format examples: 1992-2021, 1995-2010, 2000-2015+, 2000-2000.
-        - 'parent_company_country'. The country of the headquarters of the parent company.
-        - 'JV'. 1 if it's Joint Venture, 0 if not.
-        - 'GUO'. The name of the Global Ultimate Owner if it's a subsidiary. In case of a Joint Venture, the part with more ownership. In case of 50:50 ownership, return the 2 parent companies with 50 percent share, write both.
-        - 'GUO_country'. The country of the headquarters of the GUO company or companies.
-        - 'sources'. the url of the online sources that you used to extract the information.
+        - 'orbis_company_name': Legal firm name. Track if the company name changed, and change it according to year.
+        - 'company_international_name': The company international name.
+        - 'establishment_year': The establishment year of the company.
+        - 'parent_company_name_orbis': The name of the direct parent company if it's a subsidiary. Consider that parent companies can be part of Joint ventures. List all the direct parent companies for a given adquisition.
+        - 'parent_company_ownership_years': Ownership Dates in years. From which year to which year the parent company had ownership of the subsidiary. The range years can go before 1995 and beyond 2015. Only the years, no text. Format examples: 1992-2021, 1995-2010, 2000-2015+, 2000-2000.
+        - 'parent_company_country': The country of the headquarters of the parent company.
+        - 'JV': 1 if it's Joint Venture, 0 if not.
+        - 'GUO': The name of the Global Ultimate Owner if it's a subsidiary. In case of a Joint Venture, the part with more ownership. In case of 50:50 ownership, return the 2 parent companies with 50 percent share, write both.
+        - 'GUO_country': The country of the headquarters of the GUO company or companies.
+        - 'IBG': 1 if the company is part of a "Indian Business Group", 0 otherwise. "IBG" is 1 when the company is part of a recognized Indian business group (IBG) — i.e. a multi-firm group with identifiable common control, typically listed among India’s known industrial groups (e.g., Tata, Mahindra, Reliance, Birla, Bajaj, TVS, L&T, Kalyani, Murugappa, etc.).
+        - 'sources': the full url of the online sources that you used to extract the information. It cannot be formated as "S1,S2,S3"
 
         Output:
         - Return a markdown text file with the information.
-
-
         """
 
     client = OpenAI(api_key=CHATGPT_KEY)
@@ -125,20 +123,22 @@ def create_websearch_llm_response(data, CHATGPT_KEY, MODEL, print_cost=False):
 
     return response
 
-if __name__ == "__main__":
+def main(argv=None):
 
     parser = argparse.ArgumentParser(description="LLM company web search call.")
     parser.add_argument("--bvd_id", type=str, required=True, help="Bureau van Dijk company ID")
     parser.add_argument("--model", type=str, default="gpt-5", help="LLM model to use (default: gpt-5)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     BVD_ID = args.bvd_id
     MODEL = args.model
 
     load_dotenv()
-    MASTER_DATA_PATH =  ${MASTER_DATA_PATH}
-    LLM_RESPONSES_DATA_PATH =  ${LLM_RESPONSES_DATA_PATH}
+    MASTER_DATA_PATH =  os.getenv("MASTER_DATA_PATH")
+    LLM_RESPONSES_DATA_PATH = os.getenv("LLM_RESPONSES_DATA_PATH")
 
+    if not os.path.exists(LLM_RESPONSES_DATA_PATH):
+      os.makedirs(LLM_RESPONSES_DATA_PATH)
 
     # Check if LLM response already exists
     file_name = f"{LLM_RESPONSES_DATA_PATH}/{BVD_ID}_{MODEL}_websearch.json"
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         print(f"✓ Web search LLM response already exists: {file_name}")
     else:
         # Step 1: Scrapping information using web_search
-        print(f"✗ Websearch LLM response not found. Running llm_web_search_call.py...")
+        print(f"✗ {BVD_ID} Websearch LLM response not found. Running llm_web_search_call.py...")
 
         df_company = filter_company(
             RAW_DATA_PATH=MASTER_DATA_PATH,
@@ -165,4 +165,9 @@ if __name__ == "__main__":
                 "response": response_web.model_dump()
             }, f, ensure_ascii=False, indent=2)
 
-        print(f"✓ llm_web_search_call.py completed successfully")
+        print("✓ llm_web_search_call.py completed successfully")
+
+        return response_web
+
+if __name__ == "__main__":
+  main()

@@ -6,15 +6,17 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 
+pd.set_option('future.no_silent_downcasting', True)
+
 def load_dotenv():
     # Ref: https://stackoverflow.com/a/78972639/
     dotenv.load_dotenv()
     dotenv.load_dotenv(dotenv.find_dotenv(usecwd=True))
 
-def get_company_orbis_name(MASTER_DATA_PATH, BVD_ID):
+def get_orbis_company_name(MASTER_DATA_PATH, BVD_ID):
     # Selected company
     df = pd.read_csv(MASTER_DATA_PATH)
-    company_string = df[df["BVD_ID"] == BVD_ID].company_name.unique()[0]
+    company_string = df[df["BVD_ID"] == BVD_ID].orbis_company_name.unique()[0]
 
     return company_string
 
@@ -35,11 +37,11 @@ def create_bvd_id_map_dicts(RAW_OWNERSHIP_DATA_PATH):
     df = pd.read_stata(RAW_OWNERSHIP_DATA_PATH)
 
     bvd_company_name_map = (
-        df[["bvd_id_number", "CompanyName"]]
+        df[["bvd_id_number", "OrbisCompanyName"]]
         .drop_duplicates()
         .replace("", pd.NA)
         .dropna()
-        .set_index("CompanyName")["bvd_id_number"]
+        .set_index("OrbisCompanyName")["bvd_id_number"]
         .to_dict()
     )
 
@@ -105,11 +107,11 @@ def expand_columns(data):
 
     return df
 
-def map_ids(data, company_id_map, BVD_ID, COMPANY_ORBIS_NAME):
+def map_ids(data, company_id_map, BVD_ID, ORBIS_COMPANY_NAME):
     df = data.copy()
 
     df["BVD_ID"] = BVD_ID
-    df["company_name_orbis"] = COMPANY_ORBIS_NAME
+    df["orbis_company_name"] = ORBIS_COMPANY_NAME
     df["parent_BVD_ID"] = df["parent_company_name_orbis"].map(company_id_map)
     df["GUO_BVD_ID"] = df["GUO"].map(company_id_map)
 
@@ -119,20 +121,62 @@ def create_guo_india_columns(data):
     df = data.copy()
 
     guo_india_map = df[df["GUO_country"] == "India"].set_index("year").to_dict()["GUO"]
-    df["GUO_fav_India"] = df["year"].map(guo_india_map)
-    df["GUO_fav_India"] = np.where(df["GUO_fav_India"].isna(), df["GUO"], df["GUO_fav_India"])
-    df["GUO_fav_India_BVD_ID"] = df["GUO_fav_India"].map(company_id_map)
+    df["GUO_only_India"] = df["year"].map(guo_india_map)
+    df["GUO_only_India"] = np.where(df["GUO_only_India"].isna(), np.nan, df["GUO_only_India"])
+    df["GUO_only_India_BVD_ID"] = df["GUO_only_India"].map(guo_india_map)
 
     return df
+
+def create_jv_with_india_column(data):
+    df = data.copy()
+
+    has_india = df.groupby('year')['parent_company_country'].transform(lambda x: 'India' in x.values)
+    has_non_india = df.groupby('year')['parent_company_country'].transform(lambda x: any(c != 'India' for c in x.values))
+
+    df['JV_with_india'] = np.where(has_india & has_non_india, 1, 0)
+
+    return df
+
+def create_foreign_controlled_dummy(data):
+  df = data.copy()
+
+  # If only one GUO from a Indian country, then 0, otherwise 1.
+  # If there is only one foreign GUO means that is the mayor stakeholder.
+  foreign_controlled_map = df[df["GUO_country"] == "India"].set_index("year").to_dict()["GUO_country"]
+  df["foreign_controlled"] = df["year"].map(foreign_controlled_map)
+  df["foreign_controlled"] = np.where(df["foreign_controlled"] == "India", 0, 1)
+
+  # Fix: correctly handle missing GUO_country values
+  df["foreign_controlled"] = np.where(
+      pd.isna(df["GUO_country"]),
+      np.nan,
+      df["foreign_controlled"]
+  )
+
+  return df
 
 def order_columns(data):
     df = data.copy()
 
     df = df[[
-        'BVD_ID', 'year', 'establishment_year',
-        'company_name_orbis', 'company_name', 'company_international_name',
-        'parent_company_name_orbis',  'parent_BVD_ID', 'parent_company_ownership_years',
-        'parent_company_country', 'JV', 'GUO', 'GUO_BVD_ID', 'GUO_country', 'GUO_fav_India', 'GUO_fav_India_BVD_ID',
+        'BVD_ID',
+        'year',
+        'establishment_year',
+        'orbis_company_name',
+        'company_international_name',
+        'parent_company_name_orbis',
+        'parent_BVD_ID',
+        'parent_company_ownership_years',
+        'parent_company_country',
+        'JV',
+        'JV_with_india',
+        'GUO',
+        'GUO_BVD_ID',
+        'GUO_country',
+        'foreign_controlled',
+        'GUO_only_India',
+        'GUO_only_India_BVD_ID',
+        'IBG',
         'sources']]
 
     return df
@@ -142,7 +186,7 @@ def clean_nans(data):
 
     # NaN all data before the establishment_year
     mask = df["year"] < df["establishment_year"]
-    cols_to_nan = df.columns.difference(["BVD_ID", "year", "establishment_year", "sources"])
+    cols_to_nan = df.columns.difference(["BVD_ID", "year", "sources"])
     df.loc[mask, cols_to_nan] = np.nan
 
     # Format NaNs
@@ -152,58 +196,67 @@ def clean_nans(data):
     return df
 
 def clean_formats(data):
-    df = data.copy()
+  df = data.copy()
 
-    # Ints showing as floats
-    df['JV'] = df['JV'].astype('Int64')
-    df['establishment_year'] = df['establishment_year'].astype('Int64')
+  # Ints showing as floats
+  df['JV'] = df['JV'].astype('Int64')
+  df['JV_with_india'] = df['JV_with_india'].astype('Int64')
+  df['IBG'] = df['IBG'].astype('Int64')
+  df['foreign_controlled'] = df['foreign_controlled'].astype('Int64')
+  df['establishment_year'] = df['establishment_year'].astype('Int64')
 
-    # Country Names
-    df['parent_company_country'] = df['parent_company_country'].replace({"USA": "United States"})
-    df['GUO_country'] = df['GUO_country'].replace({"USA": "United States"})
+  # Country Names
+  df['parent_company_country'] = df['parent_company_country'].replace({"USA": "United States"})
+  df['GUO_country'] = df['GUO_country'].replace({"USA": "United States"})
 
-    return df
+  return df
+
+def main(argv=None):
+
+  parser = argparse.ArgumentParser(description="LLM company call.")
+  parser.add_argument("--bvd_id", type=str, required=True, help="Bureau van Dijk company ID")
+  parser.add_argument("--model", type=str, default="gpt-5", help="LLM model used to process the data (default: gpt-5)")
+  args = parser.parse_args(argv)
+
+  BVD_ID = args.bvd_id
+  MODEL = args.model
+
+  load_dotenv()
+
+  RAW_OWNERSHIP_DATA_PATH = os.getenv("RAW_OWNERSHIP_DATA_PATH")
+  MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
+  LLM_RESPONSES_DATA_PATH = os.getenv("LLM_RESPONSES_DATA_PATH")
+  COMPANY_FOLDER_PATH = os.getenv("COMPANY_FOLDER_PATH")
+
+  orbis_company_name = get_orbis_company_name(MASTER_DATA_PATH=MASTER_DATA_PATH, BVD_ID=BVD_ID)
+  company_id_map = create_bvd_id_map_dicts(RAW_OWNERSHIP_DATA_PATH)
+
+  print(f"Cleaning panel data of {orbis_company_name} ({BVD_ID})...")
+  data = load_llm_json_response_text(LLM_RESPONSES_DATA_PATH=LLM_RESPONSES_DATA_PATH,
+                              BVD_ID=BVD_ID,
+                              MODEL=MODEL)
+  df = (
+      data
+      .pipe(expand_columns)
+      .pipe(map_ids,
+          company_id_map=company_id_map,
+          BVD_ID=BVD_ID,
+          ORBIS_COMPANY_NAME=orbis_company_name)
+      .pipe(create_guo_india_columns)
+      .pipe(create_jv_with_india_column)
+      .pipe(create_foreign_controlled_dummy)
+      .pipe(order_columns)
+      .pipe(clean_nans)
+      .pipe(clean_formats)
+  )
+
+  # Save clean file
+  file_name = f"{COMPANY_FOLDER_PATH}/{BVD_ID}_{MODEL}_panel.csv"
+  df.to_csv(file_name, index=False)
+  print(f"Done! Saved as {file_name}")
+
+  return df
+
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="LLM company call.")
-    parser.add_argument("--bvd_id", type=str, required=True, help="Bureau van Dijk company ID")
-    parser.add_argument("--model", type=str, default="gpt-5", help="LLM model to use (default: gpt-5)")
-    args = parser.parse_args()
-
-    # Needed to identify the company
-    BVD_ID = args.bvd_id
-    MODEL = args.model
-
-    load_dotenv()
-
-    RAW_OWNERSHIP_DATA_PATH = os.getenv("RAW_OWNERSHIP_DATA_PATH")
-    MASTER_DATA_PATH = os.getenv("MASTER_DATA_PATH")
-    LLM_RESPONSES_DATA_PATH = os.getenv("LLM_RESPONSES_DATA_PATH")
-    COMPANY_FOLDER_PATH = os.getenv("COMPANY_FOLDER_PATH")
-
-    company_orbis_name = get_company_orbis_name(MASTER_DATA_PATH=MASTER_DATA_PATH, BVD_ID=BVD_ID)
-    company_id_map = create_bvd_id_map_dicts(RAW_OWNERSHIP_DATA_PATH)
-
-
-    print(f"Cleaning panel data of {company_orbis_name} ({BVD_ID})...")
-    data = load_llm_json_response_text(LLM_RESPONSES_DATA_PATH=LLM_RESPONSES_DATA_PATH,
-                                BVD_ID=BVD_ID,
-                                MODEL=MODEL)
-    df = (
-        data
-        .pipe(expand_columns)
-        .pipe(map_ids,
-            company_id_map=company_id_map,
-            BVD_ID=BVD_ID,
-            COMPANY_ORBIS_NAME=company_orbis_name)
-        .pipe(create_guo_india_columns)
-        .pipe(order_columns)
-        .pipe(clean_nans)
-        .pipe(clean_formats)
-    )
-
-    # Save clean file
-    file_name = f"{COMPANY_FOLDER_PATH}/{BVD_ID}_{MODEL}_panel.csv"
-    df.to_csv(file_name, index=False)
-    print(f"Done! Saved as {file_name}")
+  main()
