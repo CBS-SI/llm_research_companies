@@ -29,7 +29,25 @@ def load_llm_json_response_text(LLM_RESPONSES_DATA_PATH,
         raw_json = f.read()
 
     json_parsed = json.loads(raw_json)
-    response_text = json_parsed['response']['output'][1]['content'][0]['text']
+
+    # Handle both regular API and batch API response structures
+    # Find the message output with type="message" and status="completed"
+    output_array = json_parsed['response']['output']
+
+    response_text = None
+    for output_item in output_array:
+        if output_item.get('type') == 'message' and output_item.get('status') == 'completed':
+            # Found the message output
+            if 'content' in output_item and len(output_item['content']) > 0:
+                for content_item in output_item['content']:
+                    if content_item.get('type') == 'output_text' and 'text' in content_item:
+                        response_text = content_item['text']
+                        break
+            if response_text:
+                break
+
+    if not response_text:
+        raise ValueError(f"Could not find response text in JSON for {BVD_ID}")
 
     return pd.read_json(StringIO(response_text))
 
@@ -184,14 +202,18 @@ def order_columns(data):
 def clean_nans(data):
     df = data.copy()
 
+    # Format NaNs first (before any comparisons)
+    # Note: "–" is an em dash (U+2013), different from regular hyphen "-"
+    nan_values = ["", "None", None, "NA (independent)", "NA", "N/A", "N/A (not yet incorporated)", "[]", "<NA>", "Not applicable (standalone)", "Not found", "-", "–"]
+    df = df.where(~df.isin(nan_values), np.nan)
+
+    # Convert establishment_year to numeric (handles string years like "2005")
+    df['establishment_year'] = pd.to_numeric(df['establishment_year'], errors='coerce')
+
     # NaN all data before the establishment_year
     mask = df["year"] < df["establishment_year"]
     cols_to_nan = df.columns.difference(["BVD_ID", "year", "sources"])
     df.loc[mask, cols_to_nan] = np.nan
-
-    # Format NaNs
-    nan_values = ["", "None", None, "NA (independent)", "NA", "N/A", "N/A (not yet incorporated)", "[]", "<NA>", "Not applicable (standalone)"]
-    df = df.where(~df.isin(nan_values), np.nan)
 
     return df
 
