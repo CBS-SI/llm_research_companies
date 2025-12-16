@@ -2,10 +2,7 @@
 
 🚧 WIP - scripts and prints will change.
 
-
-## Output `.dta` file fields
-
-These are _NOT_ rules for the LLM, this are "human" explained definition of the variables.
+## Documentation of the `.dta` file fields
 
 - `BVD_ID`: the BVD of the company. Constant for years 1995-2015.
 
@@ -52,13 +49,15 @@ These are _NOT_ rules for the LLM, this are "human" explained definition of the 
 
 - `GUO_only_India_BVD_ID`: same as `GUO_BVD_ID` field but only populated for `GUO_only_india`.
 
-- `IBG`: 1 if the company is part of a "Indian Business Group", 0 otherwise. (The Oxford Handbook of Business Groups (2010; online edn, Oxford Academic, 2 Sept. 2010 -  https://doi.org/10.1093/oxfordhb/9780199552863.003.0011)
+- `IBG`: 1 if the company is part of a "Indian Business Group", 0 otherwise. (The Oxford Handbook of Business Groups (2010; online edn, Oxford Academic, 2 Sept. 2010 - https://doi.org/10.1093/oxfordhb/9780199552863.003.0011)
 
 - `sources`: The URL of the online sources that the LLM used to extract the information. If you are in doubt on why it wrote a given peace of information at a given year, visit the URL under sources.
 
 ## Scripts
 
-- `merge_raw_data.py`: Merges the 2 raw files given by the researcher.
+### Core Scripts
+
+- `merge_raw_data.py`: Merges the 2 raw files given by the researcher. `llm_web_search_call.py` use this merged file.
 
 - `llm_web_search_call.py`: OpenAI web search call to scrape a individual company information from the internet. **Using gpt-5 at real-time, it cost around $0.10 to $0.20 per company**
 
