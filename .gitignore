@@ -4,6 +4,7 @@
 
 *.ipynb
 *.csv
+*.pyc
 *.dta
 *.json
 
